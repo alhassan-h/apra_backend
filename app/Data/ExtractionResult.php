@@ -5,7 +5,7 @@ namespace App\Data;
 readonly class ExtractionResult
 {
     public function __construct(
-        /** @var array<int, array{drug_name: ?string, dosage: ?string, frequency: ?string, duration: ?string, route: ?string}> */
+        /** @var array<int, array{drug_name: ?string, dosage: ?string, frequency: ?string, duration: ?string, route: ?string, confidence_score: ?float}> */
         public array $drugs,
         public float $confidenceScore,
         public array $rawResponse,

@@ -67,22 +67,26 @@ PROMPT;
 
         $parsed = $this->parseJsonContent($content);
 
-        // Resilience: if the model returns a flat array instead of {"drugs":[...],"confidence_score":...}
-        // treat the array itself as the drugs list with confidence 0.0
+        // Resilience: model may return a flat array [{...},{...}] instead of {"drugs":[...],"confidence_score":...}
+        // When per-drug confidence_score values are present, average them for the overall score.
         if (array_is_list($parsed)) {
             $drugsRaw      = $parsed;
-            $confidenceRaw = 0.0;
+            $perDrugScores = array_filter(array_column($drugsRaw, 'confidence_score'), 'is_numeric');
+            $confidenceRaw = count($perDrugScores) > 0
+                ? array_sum($perDrugScores) / count($perDrugScores)
+                : 0.0;
         } else {
             $drugsRaw      = $parsed['drugs'] ?? [];
             $confidenceRaw = $parsed['confidence_score'] ?? 0.0;
         }
 
         $drugs = array_map(fn (array $d) => [
-            'drug_name' => $d['drug_name'] ?? null,
-            'dosage'    => $d['dosage'] ?? null,
-            'frequency' => $d['frequency'] ?? null,
-            'duration'  => $d['duration'] ?? null,
-            'route'     => $d['route'] ?? null,
+            'drug_name'        => $d['drug_name'] ?? null,
+            'dosage'           => $d['dosage'] ?? null,
+            'frequency'        => $d['frequency'] ?? null,
+            'duration'         => $d['duration'] ?? null,
+            'route'            => $d['route'] ?? null,
+            'confidence_score' => isset($d['confidence_score']) ? (float) $d['confidence_score'] : null,
         ], $drugsRaw);
 
         return new ExtractionResult(
