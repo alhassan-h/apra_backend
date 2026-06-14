@@ -47,7 +47,7 @@ class ReportController extends Controller
                 'id'                  => $p->id,
                 'prescription_number' => $p->prescription_number,
                 'status'              => $p->status,
-                'drug_name'           => $p->extraction?->drug_name,
+                'drugs'               => $p->extraction?->drugs ?? [],
                 'confidence_score'    => $p->extraction?->confidence_score,
                 'uploaded_at'         => $p->uploaded_at,
             ]),
@@ -67,17 +67,7 @@ class ReportController extends Controller
             ->orderByDesc('correction_count')
             ->get();
 
-        $mostCorrectedDrugs = PrescriptionCorrection::select('predicted_value', DB::raw('count(*) as correction_count'))
-            ->where('field_name', 'drug_name')
-            ->whereNotNull('predicted_value')
-            ->when(! $user->isAdmin(), fn ($q) => $q->whereHas(
-                'prescription',
-                fn ($q) => $q->where('uploaded_by', $user->id)
-            ))
-            ->groupBy('predicted_value')
-            ->orderByDesc('correction_count')
-            ->limit(10)
-            ->get();
+        $mostCorrectedDrugs = [];
 
         $totalCorrections = PrescriptionCorrection::when(
             ! $user->isAdmin(),
@@ -123,16 +113,28 @@ class ReportController extends Controller
             ->orderBy('month')
             ->get();
 
-        $mostCommonDrugs = PrescriptionExtraction::select('drug_name', DB::raw('count(*) as count'))
-            ->whereNotNull('drug_name')
+        $extractions = PrescriptionExtraction::select('drugs')
+            ->whereNotNull('drugs')
             ->when(! $user->isAdmin(), fn ($q) => $q->whereHas(
                 'prescription',
                 fn ($q) => $q->where('uploaded_by', $user->id)
             ))
-            ->groupBy('drug_name')
-            ->orderByDesc('count')
-            ->limit(10)
             ->get();
+
+        $drugCounts = [];
+        foreach ($extractions as $extraction) {
+            foreach ($extraction->drugs ?? [] as $drug) {
+                $name = $drug['drug_name'] ?? null;
+                if ($name) {
+                    $drugCounts[$name] = ($drugCounts[$name] ?? 0) + 1;
+                }
+            }
+        }
+
+        arsort($drugCounts);
+        $mostCommonDrugs = collect(array_slice($drugCounts, 0, 10, true))
+            ->map(fn ($count, $name) => ['drug_name' => $name, 'count' => $count])
+            ->values();
 
         return response()->json([
             'daily_volume'       => $dailyVolume,

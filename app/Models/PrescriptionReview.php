@@ -15,14 +15,17 @@ class PrescriptionReview extends Model
     protected $fillable = [
         'prescription_id',
         'reviewed_by',
-        'drug_name',
-        'dosage',
-        'frequency',
-        'duration',
-        'route',
+        'drugs',
         'review_status',
         'review_notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'drugs' => 'array',
+        ];
+    }
 
     public function prescription(): BelongsTo
     {

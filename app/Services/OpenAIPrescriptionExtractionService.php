@@ -15,19 +15,24 @@ class OpenAIPrescriptionExtractionService implements PrescriptionExtractionServi
 
     private const SYSTEM_PROMPT = <<<'PROMPT'
 You are a medical prescription extraction assistant specialized in Nigerian healthcare.
-Extract all prescription information from the provided image and return JSON only.
+Extract ALL drugs from the provided prescription image and return JSON only.
+A prescription may contain one or more drugs — extract every one you find.
 
-Required fields (return null if uncertain or not visible):
+For each drug, extract (return null if uncertain or not visible):
 - drug_name: the medication name (normalize Nigerian aliases — e.g. PCM → Paracetamol)
 - dosage: the dose amount and unit (e.g. "500mg", "5ml")
 - frequency: how often to take (e.g. "BD", "TDS", "3 times daily")
 - duration: how long to take (e.g. "5 days", "1 week")
 - route: administration route (e.g. "Oral", "IV", "Topical")
-- confidence_score: a float between 0.0 and 1.0 representing your overall confidence
+
+Also include:
+- confidence_score: a single float between 0.0 and 1.0 representing your overall confidence across all drugs
 
 Return ONLY valid JSON. Do not include any explanation or markdown.
-Example format:
-{"drug_name":"Paracetamol","dosage":"500mg","frequency":"BD","duration":"5 days","route":"Oral","confidence_score":0.92}
+Example format (single drug):
+{"drugs":[{"drug_name":"Paracetamol","dosage":"500mg","frequency":"BD","duration":"5 days","route":"Oral"}],"confidence_score":0.92}
+Example format (multiple drugs):
+{"drugs":[{"drug_name":"Paracetamol","dosage":"500mg","frequency":"BD","duration":"5 days","route":"Oral"},{"drug_name":"Amoxicillin","dosage":"250mg","frequency":"TDS","duration":"7 days","route":"Oral"}],"confidence_score":0.87}
 PROMPT;
 
     public function extract(string $imageUrl): ExtractionResult
@@ -53,7 +58,7 @@ PROMPT;
                     ],
                 ],
             ],
-            'max_tokens' => 512,
+            'max_tokens' => 1024,
             'temperature' => 0.1,
         ]);
 
@@ -62,12 +67,16 @@ PROMPT;
 
         $parsed = $this->parseJsonContent($content);
 
+        $drugs = array_map(fn (array $d) => [
+            'drug_name' => $d['drug_name'] ?? null,
+            'dosage'    => $d['dosage'] ?? null,
+            'frequency' => $d['frequency'] ?? null,
+            'duration'  => $d['duration'] ?? null,
+            'route'     => $d['route'] ?? null,
+        ], $parsed['drugs'] ?? []);
+
         return new ExtractionResult(
-            drugName: $parsed['drug_name'] ?? null,
-            dosage: $parsed['dosage'] ?? null,
-            frequency: $parsed['frequency'] ?? null,
-            duration: $parsed['duration'] ?? null,
-            route: $parsed['route'] ?? null,
+            drugs: $drugs,
             confidenceScore: (float) ($parsed['confidence_score'] ?? 0.0),
             rawResponse: $rawResponse,
             modelName: self::MODEL_NAME,

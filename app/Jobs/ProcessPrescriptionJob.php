@@ -42,25 +42,24 @@ class ProcessPrescriptionJob implements ShouldQueue
 
         $result = $extractionService->extract($this->prescription->image_url);
 
-        // Normalize drug name against the dictionary
-        $normalizedDrugName = $result->drugName;
-        if ($result->drugName) {
-            $drug = DrugDictionary::findByName($result->drugName);
-            if ($drug) {
-                $normalizedDrugName = $drug->generic_name;
+        // Normalize each drug name against the dictionary
+        $drugs = array_map(function (array $drug) {
+            if (! empty($drug['drug_name'])) {
+                $entry = DrugDictionary::findByName($drug['drug_name']);
+                if ($entry) {
+                    $drug['drug_name'] = $entry->generic_name;
+                }
             }
-        }
+
+            return $drug;
+        }, $result->drugs);
 
         PrescriptionExtraction::create([
             'prescription_id'  => $this->prescription->id,
             'model_name'       => $result->modelName,
             'model_version'    => $result->modelVersion,
             'raw_response'     => $result->rawResponse,
-            'drug_name'        => $normalizedDrugName,
-            'dosage'           => $result->dosage,
-            'frequency'        => $result->frequency,
-            'duration'         => $result->duration,
-            'route'            => $result->route,
+            'drugs'            => $drugs,
             'confidence_score' => $result->confidenceScore,
         ]);
 
@@ -76,9 +75,9 @@ class ProcessPrescriptionJob implements ShouldQueue
             user: $uploader,
             entity: $this->prescription,
             metadata: [
-                'model'      => $result->modelName,
-                'confidence' => $result->confidenceScore,
-                'drug_found' => isset($drug),
+                'model'       => $result->modelName,
+                'confidence'  => $result->confidenceScore,
+                'drug_count'  => count($drugs),
             ],
         );
     }

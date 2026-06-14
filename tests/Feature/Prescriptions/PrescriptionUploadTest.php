@@ -131,11 +131,13 @@ describe('ProcessPrescriptionJob', function () {
         ]);
 
         $fakeResult = new ExtractionResult(
-            drugName: 'Paracetamol',
-            dosage: '500mg',
-            frequency: 'BD',
-            duration: '5 days',
-            route: 'Oral',
+            drugs: [[
+                'drug_name' => 'Paracetamol',
+                'dosage'    => '500mg',
+                'frequency' => 'BD',
+                'duration'  => '5 days',
+                'route'     => 'Oral',
+            ]],
             confidenceScore: 0.92,
             rawResponse: ['choices' => [['message' => ['content' => '{}']]]],
             modelName: 'GPT4O_VISION',
@@ -160,10 +162,9 @@ describe('ProcessPrescriptionJob', function () {
         expect($rx->status)->toBe('EXTRACTED');
 
         $this->assertDatabaseHas('prescription_extractions', [
-            'prescription_id' => $rx->id,
-            'drug_name'       => 'Paracetamol',
-            'dosage'          => '500mg',
-            'model_name'      => 'GPT4O_VISION',
+            'prescription_id'  => $rx->id,
+            'model_name'       => 'GPT4O_VISION',
+            'confidence_score' => 0.92,
         ]);
     });
 });

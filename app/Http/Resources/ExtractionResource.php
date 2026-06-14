@@ -14,11 +14,7 @@ class ExtractionResource extends JsonResource
             'prescription_id'  => $this->prescription_id,
             'model_name'       => $this->model_name,
             'model_version'    => $this->model_version,
-            'drug_name'        => $this->drug_name,
-            'dosage'           => $this->dosage,
-            'frequency'        => $this->frequency,
-            'duration'         => $this->duration,
-            'route'            => $this->route,
+            'drugs'            => $this->drugs ?? [],
             'confidence_score' => $this->confidence_score,
             'created_at'       => $this->created_at,
         ];

@@ -44,11 +44,7 @@ class ReviewController extends Controller
         $review = PrescriptionReview::create([
             'prescription_id' => $prescription->id,
             'reviewed_by'     => $user->id,
-            'drug_name'       => $request->drug_name,
-            'dosage'          => $request->dosage,
-            'frequency'       => $request->frequency,
-            'duration'        => $request->duration,
-            'route'           => $request->route,
+            'drugs'           => $request->drugs ?? [],
             'review_status'   => $request->review_status,
             'review_notes'    => $request->review_notes,
         ]);
@@ -92,11 +88,7 @@ class ReviewController extends Controller
 
         $review->update([
             'reviewed_by'   => $user->id,
-            'drug_name'     => $request->drug_name,
-            'dosage'        => $request->dosage,
-            'frequency'     => $request->frequency,
-            'duration'      => $request->duration,
-            'route'         => $request->route,
+            'drugs'         => $request->drugs ?? [],
             'review_status' => $request->review_status,
             'review_notes'  => $request->review_notes,
         ]);
@@ -129,21 +121,17 @@ class ReviewController extends Controller
             return;
         }
 
-        $fields = ['drug_name', 'dosage', 'frequency', 'duration', 'route'];
+        $predictedDrugs = $extraction->drugs ?? [];
+        $correctedDrugs = $review->drugs ?? [];
 
-        foreach ($fields as $field) {
-            $predicted = $extraction->$field;
-            $corrected = $review->$field;
-
-            if ($predicted !== $corrected) {
-                PrescriptionCorrection::create([
-                    'prescription_id' => $prescription->id,
-                    'field_name'      => $field,
-                    'predicted_value' => $predicted,
-                    'corrected_value' => $corrected,
-                    'corrected_by'    => $userId,
-                ]);
-            }
+        if (json_encode($predictedDrugs) !== json_encode($correctedDrugs)) {
+            PrescriptionCorrection::create([
+                'prescription_id' => $prescription->id,
+                'field_name'      => 'drugs',
+                'predicted_value' => json_encode($predictedDrugs),
+                'corrected_value' => json_encode($correctedDrugs),
+                'corrected_by'    => $userId,
+            ]);
         }
     }
 }

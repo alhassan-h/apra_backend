@@ -5,11 +5,8 @@ namespace App\Data;
 readonly class ExtractionResult
 {
     public function __construct(
-        public ?string $drugName,
-        public ?string $dosage,
-        public ?string $frequency,
-        public ?string $duration,
-        public ?string $route,
+        /** @var array<int, array{drug_name: ?string, dosage: ?string, frequency: ?string, duration: ?string, route: ?string}> */
+        public array $drugs,
         public float $confidenceScore,
         public array $rawResponse,
         public string $modelName,
@@ -19,15 +16,11 @@ readonly class ExtractionResult
     public function toArray(): array
     {
         return [
-            'drug_name' => $this->drugName,
-            'dosage' => $this->dosage,
-            'frequency' => $this->frequency,
-            'duration' => $this->duration,
-            'route' => $this->route,
+            'drugs'           => $this->drugs,
             'confidence_score' => $this->confidenceScore,
-            'model_name' => $this->modelName,
-            'model_version' => $this->modelVersion,
-            'raw_response' => $this->rawResponse,
+            'model_name'       => $this->modelName,
+            'model_version'    => $this->modelVersion,
+            'raw_response'     => $this->rawResponse,
         ];
     }
 }

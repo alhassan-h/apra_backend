@@ -12,11 +12,7 @@ class ReviewResource extends JsonResource
         return [
             'id'              => $this->id,
             'prescription_id' => $this->prescription_id,
-            'drug_name'       => $this->drug_name,
-            'dosage'          => $this->dosage,
-            'frequency'       => $this->frequency,
-            'duration'        => $this->duration,
-            'route'           => $this->route,
+            'drugs'           => $this->drugs ?? [],
             'review_status'   => $this->review_status,
             'review_notes'    => $this->review_notes,
             'reviewer'        => new UserResource($this->whenLoaded('reviewer')),

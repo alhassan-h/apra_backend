@@ -14,13 +14,14 @@ class SubmitReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'drug_name'     => ['nullable', 'string', 'max:255'],
-            'dosage'        => ['nullable', 'string', 'max:100'],
-            'frequency'     => ['nullable', 'string', 'max:100'],
-            'duration'      => ['nullable', 'string', 'max:100'],
-            'route'         => ['nullable', 'string', 'max:100'],
-            'review_status' => ['required', 'string', 'in:APPROVED,MODIFIED,REJECTED'],
-            'review_notes'  => ['nullable', 'string', 'max:2000'],
+            'drugs'              => ['nullable', 'array'],
+            'drugs.*.drug_name'  => ['nullable', 'string', 'max:255'],
+            'drugs.*.dosage'     => ['nullable', 'string', 'max:100'],
+            'drugs.*.frequency'  => ['nullable', 'string', 'max:100'],
+            'drugs.*.duration'   => ['nullable', 'string', 'max:100'],
+            'drugs.*.route'      => ['nullable', 'string', 'max:100'],
+            'review_status'      => ['required', 'string', 'in:APPROVED,MODIFIED,REJECTED'],
+            'review_notes'       => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

@@ -18,20 +18,17 @@ class PrescriptionExtraction extends Model
         'model_name',
         'model_version',
         'raw_response',
-        'drug_name',
-        'dosage',
-        'frequency',
-        'duration',
-        'route',
+        'drugs',
         'confidence_score',
     ];
 
     protected function casts(): array
     {
         return [
-            'raw_response' => 'array',
+            'raw_response'     => 'array',
+            'drugs'            => 'array',
             'confidence_score' => 'float',
-            'created_at' => 'datetime',
+            'created_at'       => 'datetime',
         ];
     }
 

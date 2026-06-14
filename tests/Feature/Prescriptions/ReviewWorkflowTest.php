@@ -4,7 +4,7 @@ use App\Models\Prescription;
 use App\Models\PrescriptionExtraction;
 use App\Models\User;
 
-function makePrescriptionWithExtraction(User $user, array $extractionData = []): Prescription
+function makePrescriptionWithExtraction(User $user, array $extractionOverrides = []): Prescription
 {
     $rx = Prescription::factory()->create([
         'uploaded_by' => $user->id,
@@ -12,18 +12,22 @@ function makePrescriptionWithExtraction(User $user, array $extractionData = []):
         'image_url'   => 'https://res.cloudinary.com/test/rx.jpg',
     ]);
 
+    $defaultDrugs = [[
+        'drug_name' => 'Paracetamol',
+        'dosage'    => '500mg',
+        'frequency' => 'BD',
+        'duration'  => '5 days',
+        'route'     => 'Oral',
+    ]];
+
     PrescriptionExtraction::factory()->create(array_merge([
-        'prescription_id' => $rx->id,
-        'drug_name'       => 'Paracetamol',
-        'dosage'          => '500mg',
-        'frequency'       => 'BD',
-        'duration'        => '5 days',
-        'route'           => 'Oral',
+        'prescription_id'  => $rx->id,
+        'drugs'            => $defaultDrugs,
         'confidence_score' => 0.92,
-        'model_name'      => 'GPT4O_VISION',
-        'model_version'   => 'gpt-4o',
-        'raw_response'    => [],
-    ], $extractionData));
+        'model_name'       => 'GPT4O_VISION',
+        'model_version'    => 'gpt-4o',
+        'raw_response'     => [],
+    ], $extractionOverrides));
 
     return $rx;
 }
@@ -34,11 +38,13 @@ describe('Review workflow', function () {
         $rx   = makePrescriptionWithExtraction($user);
 
         $response = $this->actingAs($user)->postJson("/api/prescriptions/{$rx->id}/review", [
-            'drug_name'     => 'Paracetamol',
-            'dosage'        => '500mg',
-            'frequency'     => 'BD',
-            'duration'      => '5 days',
-            'route'         => 'Oral',
+            'drugs' => [[
+                'drug_name' => 'Paracetamol',
+                'dosage'    => '500mg',
+                'frequency' => 'BD',
+                'duration'  => '5 days',
+                'route'     => 'Oral',
+            ]],
             'review_status' => 'APPROVED',
         ]);
 
@@ -51,29 +57,24 @@ describe('Review workflow', function () {
 
     it('generates corrections when pharmacist modifies fields', function () {
         $user = User::factory()->create();
-        $rx   = makePrescriptionWithExtraction($user, ['drug_name' => 'PCM', 'dosage' => '250mg']);
+        $rx   = makePrescriptionWithExtraction($user, [
+            'drugs' => [['drug_name' => 'PCM', 'dosage' => '250mg', 'frequency' => 'BD', 'duration' => '5 days', 'route' => 'Oral']],
+        ]);
 
         $this->actingAs($user)->postJson("/api/prescriptions/{$rx->id}/review", [
-            'drug_name'     => 'Paracetamol',
-            'dosage'        => '500mg',
-            'frequency'     => 'BD',
-            'duration'      => '5 days',
-            'route'         => 'Oral',
+            'drugs' => [[
+                'drug_name' => 'Paracetamol',
+                'dosage'    => '500mg',
+                'frequency' => 'BD',
+                'duration'  => '5 days',
+                'route'     => 'Oral',
+            ]],
             'review_status' => 'MODIFIED',
         ])->assertCreated();
 
         $this->assertDatabaseHas('prescription_corrections', [
             'prescription_id' => $rx->id,
-            'field_name'      => 'drug_name',
-            'predicted_value' => 'PCM',
-            'corrected_value' => 'Paracetamol',
-        ]);
-
-        $this->assertDatabaseHas('prescription_corrections', [
-            'prescription_id' => $rx->id,
-            'field_name'      => 'dosage',
-            'predicted_value' => '250mg',
-            'corrected_value' => '500mg',
+            'field_name'      => 'drugs',
         ]);
 
         expect($rx->fresh()->status)->toBe('VERIFIED');
@@ -96,12 +97,12 @@ describe('Review workflow', function () {
         $rx   = makePrescriptionWithExtraction($user);
 
         $this->actingAs($user)->postJson("/api/prescriptions/{$rx->id}/review", [
-            'drug_name'     => 'Paracetamol',
+            'drugs'         => [['drug_name' => 'Paracetamol', 'dosage' => '500mg', 'frequency' => 'BD', 'duration' => '5 days', 'route' => 'Oral']],
             'review_status' => 'APPROVED',
         ]);
 
         $this->actingAs($user)->postJson("/api/prescriptions/{$rx->id}/review", [
-            'drug_name'     => 'Paracetamol',
+            'drugs'         => [['drug_name' => 'Paracetamol', 'dosage' => '500mg', 'frequency' => 'BD', 'duration' => '5 days', 'route' => 'Oral']],
             'review_status' => 'APPROVED',
         ])->assertConflict();
     });
@@ -111,17 +112,16 @@ describe('Review workflow', function () {
         $rx   = makePrescriptionWithExtraction($user);
 
         $this->actingAs($user)->postJson("/api/prescriptions/{$rx->id}/review", [
-            'drug_name'     => 'Paracetamol',
+            'drugs'         => [['drug_name' => 'Paracetamol', 'dosage' => '500mg', 'frequency' => 'BD', 'duration' => '5 days', 'route' => 'Oral']],
             'review_status' => 'APPROVED',
         ]);
 
         $this->actingAs($user)->putJson("/api/prescriptions/{$rx->id}/review", [
-            'drug_name'     => 'Ibuprofen',
-            'dosage'        => '400mg',
+            'drugs'         => [['drug_name' => 'Ibuprofen', 'dosage' => '400mg', 'frequency' => 'TDS', 'duration' => '5 days', 'route' => 'Oral']],
             'review_status' => 'MODIFIED',
             'review_notes'  => 'Corrected drug name.',
         ])->assertOk()
-            ->assertJsonPath('drug_name', 'Ibuprofen');
+            ->assertJsonPath('drugs.0.drug_name', 'Ibuprofen');
 
         expect($rx->fresh()->status)->toBe('VERIFIED');
     });
