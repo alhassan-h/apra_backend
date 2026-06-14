@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Prescription;
+use App\Services\CloudinaryService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +15,7 @@ class PurgeCloudinaryPrescriptions extends Command
 
     protected $description = 'Delete all prescription images from Cloudinary (optionally wipe database records too)';
 
-    public function handle(): int
+    public function handle(CloudinaryService $cloudinary): int
     {
         $dryRun  = $this->option('dry-run');
         $purgeDb = $this->option('purge-db');
@@ -53,13 +54,12 @@ class PurgeCloudinaryPrescriptions extends Command
             }
 
             try {
-                $result = cloudinary()->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
-
-                if (($result['result'] ?? '') === 'ok' || ($result['result'] ?? '') === 'not found') {
+                $ok = $cloudinary->delete($publicId);
+                if ($ok) {
                     $this->info("  ✓ Deleted from Cloudinary");
                     $deleted++;
                 } else {
-                    $this->error("  ✗ Cloudinary returned: " . json_encode($result));
+                    $this->error("  ✗ Cloudinary returned unexpected result");
                     $failed++;
                 }
             } catch (\Throwable $e) {
