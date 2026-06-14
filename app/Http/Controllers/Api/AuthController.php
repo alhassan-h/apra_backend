@@ -77,4 +77,19 @@ class AuthController extends Controller
     {
         return new UserResource($request->user());
     }
+
+    public function updateProfile(Request $request): UserResource
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'full_name' => ['required', 'string', 'max:255'],
+            'email'     => ['required', 'email', 'unique:users,email,' . $user->id],
+        ]);
+
+        $user->update($validated);
+
+        return new UserResource($user->fresh());
+    }
 }
