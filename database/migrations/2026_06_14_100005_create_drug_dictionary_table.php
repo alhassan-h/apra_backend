@@ -12,7 +12,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('generic_name');
             $table->string('brand_name')->nullable();
-            $table->json('aliases')->default('[]');
+            $table->json('aliases')->nullable();
             $table->string('nafdac_code')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('created_at')->useCurrent();

@@ -67,17 +67,27 @@ PROMPT;
 
         $parsed = $this->parseJsonContent($content);
 
+        // Resilience: if the model returns a flat array instead of {"drugs":[...],"confidence_score":...}
+        // treat the array itself as the drugs list with confidence 0.0
+        if (array_is_list($parsed)) {
+            $drugsRaw      = $parsed;
+            $confidenceRaw = 0.0;
+        } else {
+            $drugsRaw      = $parsed['drugs'] ?? [];
+            $confidenceRaw = $parsed['confidence_score'] ?? 0.0;
+        }
+
         $drugs = array_map(fn (array $d) => [
             'drug_name' => $d['drug_name'] ?? null,
             'dosage'    => $d['dosage'] ?? null,
             'frequency' => $d['frequency'] ?? null,
             'duration'  => $d['duration'] ?? null,
             'route'     => $d['route'] ?? null,
-        ], $parsed['drugs'] ?? []);
+        ], $drugsRaw);
 
         return new ExtractionResult(
             drugs: $drugs,
-            confidenceScore: (float) ($parsed['confidence_score'] ?? 0.0),
+            confidenceScore: (float) $confidenceRaw,
             rawResponse: $rawResponse,
             modelName: self::MODEL_NAME,
             modelVersion: self::MODEL_VERSION,

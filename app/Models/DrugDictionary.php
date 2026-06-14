@@ -22,6 +22,10 @@ class DrugDictionary extends Model
         'is_active',
     ];
 
+    protected $attributes = [
+        'aliases' => '[]',
+    ];
+
     protected function casts(): array
     {
         return [
