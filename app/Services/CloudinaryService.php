@@ -8,12 +8,12 @@ class CloudinaryService
 {
     public function uploadPrescription(UploadedFile $file): string
     {
-        $result = cloudinary()->upload($file->getRealPath(), [
+        $result = cloudinary()->uploadApi()->upload($file->getRealPath(), [
             'folder'        => 'apra/prescriptions',
             'resource_type' => 'auto',
             'use_filename'  => false,
         ]);
 
-        return $result->getSecurePath();
+        return $result['secure_url'];
     }
 }
