@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DrugController;
 use App\Http\Controllers\Api\ExtractionController;
@@ -48,5 +50,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('dashboard', [ReportController::class, 'dashboard']);
         Route::get('corrections', [ReportController::class, 'corrections']);
         Route::get('usage', [ReportController::class, 'usage']);
+    });
+
+    // ── Admin-only ────────────────────────────────────────────────────────────
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::get('users', [AdminUserController::class, 'index']);
+        Route::put('users/{user}', [AdminUserController::class, 'update']);
+        Route::delete('users/{user}', [AdminUserController::class, 'destroy']);
+
+        Route::get('audit-logs', [AuditLogController::class, 'index']);
     });
 });
